@@ -3,6 +3,7 @@ from sima_torch.transformer import SimaTransformer
 
 # Example
 x = torch.randint(0, 256, (1, 1024))
+img = torch.randn(1, 3, 256, 256)
 
 # Instantiate the model
 model = SimaTransformer(
@@ -19,5 +20,5 @@ model = SimaTransformer(
     max_seq_len=1024,
 )
 
-out = model(x)
+out = model(x, img=img)
 print(out.shape)  # torch.Size([1, 1024, 512])

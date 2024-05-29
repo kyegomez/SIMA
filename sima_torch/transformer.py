@@ -1,10 +1,15 @@
 import torch
-from torch import nn
+from torch import nn, Tensor
 from x_transformers import (
     Decoder,
     Encoder,
     TransformerWrapper,
+    ViTransformerWrapper,
 )
+
+
+def exists(val):
+    return val is not None
 
 
 class SimaTransformer(nn.Module):
@@ -46,6 +51,9 @@ class SimaTransformer(nn.Module):
         decoder_dim: int = 512,
         max_seq_len: int = 1024,
         training_on: bool = False,
+        image_size: int = 256,
+        patch_size: int = 32,
+        vit_num_classes: int = 1000,
         *args,
         **kwargs,
     ):
@@ -71,6 +79,7 @@ class SimaTransformer(nn.Module):
                 dim=encoder_dim,
                 depth=enc_depth,
                 heads=enc_heads,
+                cross_attend=True,  # set this to True
                 *args,
                 **kwargs,
             ),
@@ -100,8 +109,25 @@ class SimaTransformer(nn.Module):
         # Norm
         self.norm = nn.LayerNorm(dim)
 
+        # Vit
+        self.vit = ViTransformerWrapper(
+            image_size=image_size,
+            patch_size=patch_size,
+            num_classes=vit_num_classes,
+            attn_layers=Encoder(
+                dim=encoder_dim,
+                depth=enc_depth,
+                heads=enc_heads,
+            ),
+        )
+
     def forward(
-        self, x, mask: torch.ones_like = None, *args, **kwargs
+        self,
+        x,
+        img: Tensor = None,
+        mask: torch.ones_like = None,
+        *args,
+        **kwargs,
     ):
         """
         Forward pass of the SimaTransformer model.
@@ -117,10 +143,27 @@ class SimaTransformer(nn.Module):
         if mask is None:
             mask = torch.ones_like(x).bool()
 
-        if self.training_on:
-            # Get the loss
-            pass
+        if exists(img):
+            img_embeddings = self.vit(img, return_embeddings=True)
+            img_embeddings = self.norm(img_embeddings)
+            print(img_embeddings.shape)
+
+            encoded = self.encoder(
+                x,
+                mask=mask,
+                context=img_embeddings,
+                return_embeddings=True,
+                *args,
+                **kwargs,
+            )
+            print(f"Encoded shape: {encoded.shape}")
+
+            out = self.decoder(
+                x, context=encoded, context_mask=mask, *args, **kwargs
+            )
+            return out
         else:
+
             encoded = self.encoder(
                 x, mask=mask, return_embeddings=True
             )
