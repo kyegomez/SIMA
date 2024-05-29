@@ -64,9 +64,9 @@ texts = ["a description", "another description"]
 
 # (3) train your model, passing in your list of strings as 'texts'
 
-pred = model(data, texts=texts)
-
-# after much training, you can now do classifier free guidance by passing in a condition scale of > 1. !
+# pred = model(data, texts=texts)
+# print(pred)
+# # after much training, you can now do classifier free guidance by passing in a condition scale of > 1. !
 
 model.eval()
 guided_pred = model(

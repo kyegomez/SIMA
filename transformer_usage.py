@@ -1,4 +1,4 @@
-import torch 
+import torch
 from sima_torch.transformer import SimaTransformer
 
 # Example
